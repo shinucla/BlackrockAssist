@@ -1,3 +1,8 @@
+<img width="640" height="298" alt="image" src="https://github.com/user-attachments/assets/88ea7e68-b432-4e43-8559-3d57ae29706b" />
+
+<img width="628" height="644" alt="image" src="https://github.com/user-attachments/assets/dd1bde3e-13eb-4716-aa42-eed21f9722f1" />
+
+
 # BlackrockAssist
 
 World of Warcraft **3.3.5a** (WotLK) addon that highlights UI frames under the mouse and shows identifiers you can use in Lua/macros.
