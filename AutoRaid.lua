@@ -39,6 +39,12 @@ local inspectWait = 0
 local INSPECT_TIMEOUT = 3
 local INSPECT_GAP = 0.25
 
+local ScheduleTryAutoRaid
+local ScheduleInspectStep
+local ProcessNextInspect
+local StartRoleScan
+local TryAutoRaidInternal
+
 local function Now()
   return GetTime and GetTime() or 0
 end
@@ -196,7 +202,43 @@ local function FinishInspectScan()
   end
 end
 
-local function ProcessNextInspect()
+ScheduleTryAutoRaid = function(delay)
+  if scheduled then
+    return
+  end
+  scheduled = true
+  local wait = delay or 0.15
+  local elapsed = 0
+  scheduler:SetScript("OnUpdate", function(self, e)
+    e = tonumber(e) or tonumber(arg1) or 0
+    elapsed = elapsed + e
+    if elapsed < wait then
+      return
+    end
+    self:SetScript("OnUpdate", nil)
+    scheduled = false
+    TryAutoRaidInternal()
+  end)
+end
+
+ScheduleInspectStep = function(delay)
+  scheduler:SetScript("OnUpdate", nil)
+  scheduled = true
+  local wait = delay or 0.1
+  local elapsed = 0
+  scheduler:SetScript("OnUpdate", function(self, e)
+    e = tonumber(e) or tonumber(arg1) or 0
+    elapsed = elapsed + e
+    if elapsed < wait then
+      return
+    end
+    self:SetScript("OnUpdate", nil)
+    scheduled = false
+    ProcessNextInspect()
+  end)
+end
+
+ProcessNextInspect = function()
   if not scanning then
     return
   end
@@ -244,24 +286,7 @@ local function ProcessNextInspect()
   end
 end
 
-function ScheduleInspectStep(delay)
-  scheduler:SetScript("OnUpdate", nil)
-  scheduled = true
-  local wait = delay or 0.1
-  local elapsed = 0
-  scheduler:SetScript("OnUpdate", function(self, e)
-    e = tonumber(e) or tonumber(arg1) or 0
-    elapsed = elapsed + e
-    if elapsed < wait then
-      return
-    end
-    self:SetScript("OnUpdate", nil)
-    scheduled = false
-    ProcessNextInspect()
-  end)
-end
-
-local function StartRoleScan()
+StartRoleScan = function()
   if scanning then
     return
   end
@@ -291,7 +316,7 @@ local function StartRoleScan()
   ProcessNextInspect()
 end
 
-local function TryAutoRaidInternal()
+TryAutoRaidInternal = function()
   if not BA:IsAutoRaidEnabled() then
     return
   end
@@ -312,30 +337,12 @@ local function TryAutoRaidInternal()
   local how = DoConvertToRaid()
   if how then
     pendingMarkers = true
-    lastAction = Now()
     BA:AutoRaidLog("Converting party to raid via " .. how)
+    scheduled = false
+    ScheduleTryAutoRaid(0.6)
   else
     BA:AutoRaidLog("Convert failed — open Social (O) -> Raid tab.")
   end
-end
-
-local function ScheduleTryAutoRaid(delay)
-  if scheduled then
-    return
-  end
-  scheduled = true
-  local wait = delay or 0.15
-  local elapsed = 0
-  scheduler:SetScript("OnUpdate", function(self, e)
-    e = tonumber(e) or tonumber(arg1) or 0
-    elapsed = elapsed + e
-    if elapsed < wait then
-      return
-    end
-    self:SetScript("OnUpdate", nil)
-    scheduled = false
-    TryAutoRaidInternal()
-  end)
 end
 
 local function OnInspectTalentReady()
@@ -369,17 +376,29 @@ local function OnEvent(self, event)
   end
 
   if event == "RAID_ROSTER_UPDATE" then
-    if pendingMarkers or PlayerInRaid() then
-      if Now() - lastAction >= COOLDOWN then
-        ScheduleTryAutoRaid(0.3)
-      end
+    if pendingMarkers then
+      ScheduleTryAutoRaid(0.2)
+      return
+    end
+    if PlayerInRaid() and Now() - lastAction >= COOLDOWN then
+      ScheduleTryAutoRaid(0.3)
     end
     return
   end
 
-  if event == "PARTY_MEMBERS_CHANGED"
-    or event == "PARTY_LEADER_CHANGED"
-    or event == "PLAYER_ENTERING_WORLD"
+  if event == "PARTY_MEMBERS_CHANGED" or event == "PARTY_LEADER_CHANGED" then
+    scheduled = false
+    if pendingMarkers then
+      ScheduleTryAutoRaid(0.2)
+      return
+    end
+    if IsGroupLeader() and (InParty() or PlayerInRaid()) then
+      ScheduleTryAutoRaid(0.35)
+    end
+    return
+  end
+
+  if event == "PLAYER_ENTERING_WORLD"
     or event == "PLAYER_LOGIN"
     or event == "PLAYER_REGEN_ENABLED" then
     if Now() - lastAction >= COOLDOWN then

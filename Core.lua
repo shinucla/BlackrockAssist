@@ -408,7 +408,7 @@ BA:SetScript("OnEvent", function(self, event, arg1)
       BA:ParseAutoPurchaseList()
     end
     DEFAULT_CHAT_FRAME:AddMessage(
-      "|cff40d9ffBlackrockAssist|r loaded (v1.3.0). Options: Esc -> Interface -> AddOns."
+      "|cff40d9ffBlackrockAssist|r loaded (v1.3.2). Options: Esc -> Interface -> AddOns."
     )
     if BA.InitOptionsPanel then
       BA:InitOptionsPanel()
