@@ -1,0 +1,9 @@
+## Interface: 30300
+## Title: |cff40d9ffBlackrockAssist|r
+## Notes: UI frame inspector — hover windows for glow + frame ID (/ba)
+## Author: BlackrockAssist
+## Version: 1.3.0
+## DefaultState: enabled
+## SavedVariables: BlackrockAssistDB
+
+BlackrockAssist.xml
