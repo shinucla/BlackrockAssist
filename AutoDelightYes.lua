@@ -422,7 +422,7 @@ local function TryAutoStackSplit(elapsed)
       if BA:IsAutoDebug() then
         BA:Debug("stack split okay: " .. tostring(why))
       else
-        BA:Print("Stack split set to |cffffffff" .. stackSplitTargetAmount .. "|r and confirmed.")
+        -- BA:Print("Stack split set to |cffffffff" .. stackSplitTargetAmount .. "|r and confirmed.")
       end
       ResetStackSplitAutomation()
     else
