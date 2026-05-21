@@ -336,7 +336,7 @@ local function TryAutoYes()
   local clicked, clickWhy = ClickYes(popup, popupIndex)
   if clicked then
     lastClickKey = key
-    BA:Print("Auto-clicked Yes for |cffffffff" .. (matchedItem or itemName) .. "|r (" .. clickWhy .. ").")
+    --BA:Print("Auto-clicked Yes for |cffffffff" .. (matchedItem or itemName) .. "|r (" .. clickWhy .. ").")
     if BA:IsAutoDebug() then
       BA:Debug("CLICK OK: " .. clickWhy)
     end
