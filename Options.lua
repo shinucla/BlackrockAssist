@@ -291,7 +291,7 @@ function BA:InitOptionsPanel()
     panel,
     debugRow,
     "Auto raid",
-    "Leader: convert to raid. You {circle}, healers {square}/{moon}/{star}, DPS {skull}/{cross}.",
+    "Leader: convert to raid and auto marking.",
     36
   )
 
