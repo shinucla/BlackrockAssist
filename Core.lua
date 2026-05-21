@@ -255,10 +255,21 @@ end
 _G["BA"] = BA
 BA.GetFrame = BA_GetFrame
 
+local function ResolveClickTarget(name)
+  if name:match("^BA_Frame_%d+$") and BA.GetFrame then
+    return BA:GetFrame(name)
+  end
+  return _G[name]
+end
+
 local function ClickNamedFrame(name)
-  local frame = _G[name]
+  local frame = ResolveClickTarget(name)
   if not frame then
-    DEFAULT_CHAT_FRAME:AddMessage("|cff40d9ffBlackrockAssist:|r no global frame named |cffffffff" .. name .. "|r")
+    DEFAULT_CHAT_FRAME:AddMessage(
+      "|cff40d9ffBlackrockAssist:|r no frame |cffffffff"
+        .. name
+        .. "|r (names are case-sensitive; copy from inspector label)."
+    )
     return
   end
   if frame.Click then
@@ -277,6 +288,14 @@ local function ClickNamedFrame(name)
   DEFAULT_CHAT_FRAME:AddMessage("|cff40d9ffBlackrockAssist:|r |cffffffff" .. name .. "|r has no Click/OnClick handler.")
 end
 
+local function ExtractClickName(raw)
+  local _, endPos = raw:lower():find("^click%s+")
+  if not endPos then
+    return nil
+  end
+  return trim(raw:sub(endPos + 1))
+end
+
 -- ---------------------------------------------------------------------------
 -- Slash: /ba [on|off|click <name>]
 -- ---------------------------------------------------------------------------
@@ -290,7 +309,7 @@ local function PrintHelp()
   DEFAULT_CHAT_FRAME:AddMessage("|cff40d9ffBlackrockAssist|r — UI frame inspector (3.3.5a)")
   DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba|r — show this help")
   DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba inspect on|r | |cffffffff/ba inspect off|r — frame hover inspector")
-  DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba click <FrameName>|r — e.g. /ba click TradeFrameCloseButton")
+  DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba click <FrameName>|r — case-sensitive; e.g. StackSplitRightButton or BA_Frame_3")
   DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba buy on|r | |cffffffff/ba buy off|r — auto Yes for items in options list")
   DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba debug on|r — open debug window; |cffffffff/ba dump|r — refresh copyable dump")
   DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba raid on|r | |cffffffff/ba raid off|r | |cffffffff/ba raid now|r — retry convert/markers")
@@ -299,68 +318,68 @@ local function PrintHelp()
 end
 
 SlashCmdList["BLACKROCKASSIST"] = function(msg)
-  msg = trim(msg or ""):lower()
-  if msg == "" or msg == "help" or msg == "?" then
-    PrintHelp()
-    return
-  end
-  if msg == "inspect on" or msg == "inspect 1" or msg == "inspect true" then
-    SetEnabled(true)
-    return
-  end
-  if msg == "inspect off" or msg == "inspect 0" or msg == "inspect false" then
-    SetEnabled(false)
-    return
-  end
-  local clickName = msg:match("^click%s+(.+)$")
+  local raw = trim(msg or "")
+  local lower = raw:lower()
+  local clickName = ExtractClickName(raw)
   if clickName then
-    clickName = trim(clickName)
     ClickNamedFrame(clickName)
     return
   end
-  if msg == "buy on" or msg == "buy 1" then
+  if lower == "" or lower == "help" or lower == "?" then
+    PrintHelp()
+    return
+  end
+  if lower == "inspect on" or lower == "inspect 1" or lower == "inspect true" then
+    SetEnabled(true)
+    return
+  end
+  if lower == "inspect off" or lower == "inspect 0" or lower == "inspect false" then
+    SetEnabled(false)
+    return
+  end
+  if lower == "buy on" or lower == "buy 1" then
     if BA_SetAutoDelightEnabled then
       BA_SetAutoDelightEnabled(true, false)
     end
     return
   end
-  if msg == "buy off" or msg == "buy 0" then
+  if lower == "buy off" or lower == "buy 0" then
     if BA_SetAutoDelightEnabled then
       BA_SetAutoDelightEnabled(false, false)
     end
     return
   end
-  if msg == "debug on" or msg == "debug 1" then
+  if lower == "debug on" or lower == "debug 1" then
     if BA_SetAutoDebug then
       BA_SetAutoDebug(true, false)
     end
     return
   end
-  if msg == "debug off" or msg == "debug 0" then
+  if lower == "debug off" or lower == "debug 0" then
     if BA_SetAutoDebug then
       BA_SetAutoDebug(false, false)
     end
     return
   end
-  if msg == "raid on" or msg == "raid 1" then
+  if lower == "raid on" or lower == "raid 1" then
     if BA_SetAutoRaidEnabled then
       BA_SetAutoRaidEnabled(true, false)
     end
     return
   end
-  if msg == "raid off" or msg == "raid 0" then
+  if lower == "raid off" or lower == "raid 0" then
     if BA_SetAutoRaidEnabled then
       BA_SetAutoRaidEnabled(false, false)
     end
     return
   end
-  if msg == "raid now" or msg == "raid try" then
+  if lower == "raid now" or lower == "raid try" then
     if BA_ForceAutoRaid then
       BA_ForceAutoRaid()
     end
     return
   end
-  if msg == "dump" or msg == "debug dump" then
+  if lower == "dump" or lower == "debug dump" then
     if BA.CreateDebugFrame then
       BA:CreateDebugFrame()
     end

@@ -12,11 +12,22 @@ local POPUP_YES = "StaticPopup1Button1"
 local MAX_POPUPS = 4
 local MAX_DUMP_LINES = 50
 
+local STACK_SPLIT_FRAME = "StackSplitFrame"
+local STACK_SPLIT_TEXT = "StackSplitText"
+local STACK_SPLIT_TARGET = 10
+local STACK_SPLIT_CLICK_GAP = 0.12
+local STACK_SPLIT_PENDING_SEC = 20
+
 local pollElapsed = 0
 local POLL_INTERVAL = 0.05
 local lastClickKey
 local lastDumpKey
 local popupWasVisible = {}
+local pendingStackSplit = false
+local pendingStackSplitUntil = 0
+local stackSplitStep = nil
+local stackSplitWait = 0
+local stackSplitTargetAmount = STACK_SPLIT_TARGET
 
 -- ---------------------------------------------------------------------------
 -- Debug helpers
@@ -265,6 +276,164 @@ local function ClickYes(popup, popupIndex)
   return false, "no click method"
 end
 
+local function StackSplitDialogVisible()
+  local frame = _G[STACK_SPLIT_FRAME]
+  return frame and frame.IsVisible and frame:IsVisible()
+end
+
+local function StackSplitTargetAmount()
+  local frame = _G[STACK_SPLIT_FRAME]
+  if not frame then
+    return STACK_SPLIT_TARGET
+  end
+  local maxStack = tonumber(frame.maxStack) or STACK_SPLIT_TARGET
+  if maxStack < 2 then
+    return 1
+  end
+  if STACK_SPLIT_TARGET > maxStack then
+    return maxStack
+  end
+  return STACK_SPLIT_TARGET
+end
+
+-- WotLK uses StackSplitFrame.split + StackSplitText; button :Click() does not update the value.
+local function SetStackSplitAmount(amount)
+  local frame = _G[STACK_SPLIT_FRAME]
+  if not frame or not frame:IsVisible() then
+    return false, "StackSplitFrame not visible"
+  end
+
+  amount = tonumber(amount) or STACK_SPLIT_TARGET
+  local maxStack = tonumber(frame.maxStack) or amount
+  if maxStack < 2 then
+    return false, "maxStack < 2"
+  end
+  if amount < 1 then
+    amount = 1
+  end
+  if amount > maxStack then
+    amount = maxStack
+  end
+
+  frame.split = amount
+  frame.typing = 0
+
+  local text = _G[STACK_SPLIT_TEXT]
+  if text and text.SetText then
+    text:SetText(amount)
+  end
+
+  local leftBtn = _G["StackSplitLeftButton"]
+  local rightBtn = _G["StackSplitRightButton"]
+  if leftBtn and leftBtn.Enable and leftBtn.Disable then
+    if amount == 1 then
+      leftBtn:Disable()
+    else
+      leftBtn:Enable()
+    end
+  end
+  if rightBtn and rightBtn.Enable and rightBtn.Disable then
+    if amount == maxStack then
+      rightBtn:Disable()
+    else
+      rightBtn:Enable()
+    end
+  end
+
+  return true, "split=" .. amount .. " max=" .. maxStack
+end
+
+local function ConfirmStackSplitOkay()
+  if StackSplitFrameOkay_Click then
+    StackSplitFrameOkay_Click()
+    return true, "StackSplitFrameOkay_Click"
+  end
+  local btn = _G["StackSplitOkayButton"]
+  if btn and btn.Click then
+    btn:Click("LeftButton")
+    return true, "StackSplitOkayButton:Click"
+  end
+  return false, "no okay handler"
+end
+
+local function ResetStackSplitAutomation()
+  pendingStackSplit = false
+  pendingStackSplitUntil = 0
+  stackSplitStep = nil
+  stackSplitWait = 0
+  stackSplitTargetAmount = STACK_SPLIT_TARGET
+end
+
+local function QueueStackSplitAutomation()
+  pendingStackSplit = true
+  pendingStackSplitUntil = (GetTime and GetTime() or 0) + STACK_SPLIT_PENDING_SEC
+  stackSplitTargetAmount = StackSplitTargetAmount()
+  stackSplitStep = "set"
+  stackSplitWait = STACK_SPLIT_CLICK_GAP
+end
+
+local function TryAutoStackSplit(elapsed)
+  if not BA:IsAutoDelightEnabled() then
+    ResetStackSplitAutomation()
+    return
+  end
+
+  if not pendingStackSplit then
+    return
+  end
+
+  local now = GetTime and GetTime() or 0
+  if now > pendingStackSplitUntil then
+    if BA:IsAutoDebug() then
+      BA:Debug("stack split: pending window expired")
+    end
+    ResetStackSplitAutomation()
+    return
+  end
+
+  if not StackSplitDialogVisible() then
+    return
+  end
+
+  elapsed = tonumber(elapsed) or tonumber(arg1) or 0
+  stackSplitWait = stackSplitWait - elapsed
+  if stackSplitWait > 0 then
+    return
+  end
+
+  if stackSplitStep == "set" then
+    stackSplitTargetAmount = StackSplitTargetAmount()
+    local ok, why = SetStackSplitAmount(stackSplitTargetAmount)
+    if BA:IsAutoDebug() then
+      BA:Debug("stack split set: " .. tostring(why))
+    end
+    if ok then
+      stackSplitStep = "okay"
+      stackSplitWait = STACK_SPLIT_CLICK_GAP
+    else
+      stackSplitWait = STACK_SPLIT_CLICK_GAP
+    end
+    return
+  end
+
+  if stackSplitStep == "okay" then
+    local ok, why = ConfirmStackSplitOkay()
+    if ok then
+      if BA:IsAutoDebug() then
+        BA:Debug("stack split okay: " .. tostring(why))
+      else
+        BA:Print("Stack split set to |cffffffff" .. stackSplitTargetAmount .. "|r and confirmed.")
+      end
+      ResetStackSplitAutomation()
+    else
+      if BA:IsAutoDebug() then
+        BA:Debug("stack split okay failed: " .. tostring(why))
+      end
+      stackSplitWait = STACK_SPLIT_CLICK_GAP
+    end
+  end
+end
+
 local function DumpOnPopupShown(popupIndex, reason)
   if not BA:IsAutoDebug() then
     return
@@ -336,9 +505,10 @@ local function TryAutoYes()
   local clicked, clickWhy = ClickYes(popup, popupIndex)
   if clicked then
     lastClickKey = key
+    QueueStackSplitAutomation()
     --BA:Print("Auto-clicked Yes for |cffffffff" .. (matchedItem or itemName) .. "|r (" .. clickWhy .. ").")
     if BA:IsAutoDebug() then
-      BA:Debug("CLICK OK: " .. clickWhy)
+      BA:Debug("CLICK OK: " .. clickWhy .. " (stack split queued)")
     end
   elseif BA:IsAutoDebug() then
     BA:Debug("CLICK FAILED: " .. tostring(clickWhy))
@@ -353,6 +523,7 @@ local function OnAutoPoll(self, elapsed)
   end
   pollElapsed = 0
   TryAutoYes()
+  TryAutoStackSplit(elapsed)
 end
 
 -- ---------------------------------------------------------------------------
@@ -360,6 +531,23 @@ end
 -- ---------------------------------------------------------------------------
 
 local hookedShow
+local hookedOpenStackSplit
+
+local function HookOpenStackSplitFrame()
+  if hookedOpenStackSplit or not OpenStackSplitFrame then
+    return
+  end
+  hookedOpenStackSplit = true
+  hooksecurefunc("OpenStackSplitFrame", function(maxStack)
+    if not BA:IsAutoDelightEnabled() then
+      return
+    end
+    if BA:IsAutoDebug() then
+      BA:Debug("OpenStackSplitFrame maxStack=" .. tostring(maxStack))
+    end
+    QueueStackSplitAutomation()
+  end)
+end
 
 local function HookStaticPopupShow()
   if hookedShow or not StaticPopup_Show then
@@ -472,6 +660,7 @@ end
 
 function BA:UpdateAutoDelight()
   HookStaticPopupShow()
+  HookOpenStackSplitFrame()
   if self:IsAutoDelightEnabled() or self:IsAutoDebug() then
     if not self._autoDelightOnUpdate then
       self._autoDelightOnUpdate = function(frame, elapsed)
@@ -513,4 +702,5 @@ combatClear:SetScript("OnEvent", function()
   lastClickKey = nil
   lastDumpKey = nil
   popupWasVisible = {}
+  ResetStackSplitAutomation()
 end)
