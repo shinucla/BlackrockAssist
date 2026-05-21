@@ -2,6 +2,25 @@
 
 <img width="628" height="644" alt="image" src="https://github.com/user-attachments/assets/dd1bde3e-13eb-4716-aa42-eed21f9722f1" />
 
+```
+Savory Deviate Delight
+Noggenfogger Elixir
+Drums of the Wild
+Drums of Forgotten Kings
+Drums of Speed
+Lesser Flask of Toughness
+Flask of Endless Rage
+Scroll of Strength VIII
+Runescroll of Fortitude
+Stormchops
+Fish Feast
+Swiftness Potion
+
+Flask of Pure Mojo
+Flask of the Frost Wyrm
+```
+
+
 
 # BlackrockAssist
 
