@@ -71,12 +71,15 @@ Enable **BlackrockAssist** on the character select screen, then `/reload`.
 
 | Command | Action |
 |--------|--------|
-| `/ba` | Toggle inspector on/off |
-| `/ba on` / `/ba off` | Force state |
+| `/ba` | Show all commands |
+| `/ba inspect on` / `/ba inspect off` | Frame hover inspector |
+| `/ba buy on` / `/ba buy off` | Auto Yes for items in the options list |
+| `/ba debug on` / `/ba debug off` | Debug window |
+| `/ba dump` | Refresh copyable debug dump |
+| `/ba raid on` / `/ba raid off` / `/ba raid now` | Auto convert party + role markers |
 | `/ba click FrameName` | Fire `Click()` or `OnClick` on a global frame (e.g. `TradeFrameCloseButton`) |
-| `/ba help` | Show commands |
 
-**Default:** inspector is **ON** when you log in (saved in `BlackrockAssistDB`).
+**Default:** inspector is **off** at login unless enabled in options (saved in `BlackrockAssistDB`).
 
 Hover any UI window, panel, or button:
 

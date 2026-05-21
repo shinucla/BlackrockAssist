@@ -1,7 +1,7 @@
 --[[
   BlackrockAssist — WotLK 3.3.5a UI frame inspector
-  /ba          toggle on/off
-  /ba on|off   explicit state
+  /ba              print command help
+  /ba inspect on|off
   /ba click <name>  click a named frame's left button (out of combat for secure frames)
 ]]
 
@@ -288,10 +288,10 @@ StaticPopupDialogs["BLACKROCKASSIST_HELP"] = nil
 
 local function PrintHelp()
   DEFAULT_CHAT_FRAME:AddMessage("|cff40d9ffBlackrockAssist|r — UI frame inspector (3.3.5a)")
-  DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba|r — toggle on/off")
-  DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba on|r | |cffffffff/ba off|r")
+  DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba|r — show this help")
+  DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba inspect on|r | |cffffffff/ba inspect off|r — frame hover inspector")
   DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba click <FrameName>|r — e.g. /ba click TradeFrameCloseButton")
-  DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba auto on|r | |cffffffff/ba auto off|r — auto Yes for items in options list")
+  DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba buy on|r | |cffffffff/ba buy off|r — auto Yes for items in options list")
   DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba debug on|r — open debug window; |cffffffff/ba dump|r — refresh copyable dump")
   DEFAULT_CHAT_FRAME:AddMessage("  |cffffffff/ba raid on|r | |cffffffff/ba raid off|r | |cffffffff/ba raid now|r — retry convert/markers")
   DEFAULT_CHAT_FRAME:AddMessage("  Esc -> Interface -> AddOns -> BlackrockAssist for all settings.")
@@ -300,20 +300,16 @@ end
 
 SlashCmdList["BLACKROCKASSIST"] = function(msg)
   msg = trim(msg or ""):lower()
-  if msg == "" then
-    SetEnabled(not enabled)
+  if msg == "" or msg == "help" or msg == "?" then
+    PrintHelp()
     return
   end
-  if msg == "on" or msg == "1" or msg == "true" then
+  if msg == "inspect on" or msg == "inspect 1" or msg == "inspect true" then
     SetEnabled(true)
     return
   end
-  if msg == "off" or msg == "0" or msg == "false" then
+  if msg == "inspect off" or msg == "inspect 0" or msg == "inspect false" then
     SetEnabled(false)
-    return
-  end
-  if msg == "help" or msg == "?" then
-    PrintHelp()
     return
   end
   local clickName = msg:match("^click%s+(.+)$")
@@ -322,13 +318,13 @@ SlashCmdList["BLACKROCKASSIST"] = function(msg)
     ClickNamedFrame(clickName)
     return
   end
-  if msg == "auto on" or msg == "auto 1" then
+  if msg == "buy on" or msg == "buy 1" then
     if BA_SetAutoDelightEnabled then
       BA_SetAutoDelightEnabled(true, false)
     end
     return
   end
-  if msg == "auto off" or msg == "auto 0" then
+  if msg == "buy off" or msg == "buy 0" then
     if BA_SetAutoDelightEnabled then
       BA_SetAutoDelightEnabled(false, false)
     end
