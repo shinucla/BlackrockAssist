@@ -15,11 +15,11 @@ local MAX_DUMP_LINES = 50
 local STACK_SPLIT_FRAME = "StackSplitFrame"
 local STACK_SPLIT_TEXT = "StackSplitText"
 local STACK_SPLIT_TARGET = 10
-local STACK_SPLIT_CLICK_GAP = 0.12
+local STACK_SPLIT_CLICK_GAP = 0
 local STACK_SPLIT_PENDING_SEC = 20
 
 local pollElapsed = 0
-local POLL_INTERVAL = 0.05
+local POLL_INTERVAL = 0
 local lastClickKey
 local lastDumpKey
 local popupWasVisible = {}
@@ -409,11 +409,14 @@ local function TryAutoStackSplit(elapsed)
     end
     if ok then
       stackSplitStep = "okay"
-      stackSplitWait = STACK_SPLIT_CLICK_GAP
+      if STACK_SPLIT_CLICK_GAP > 0 then
+        stackSplitWait = STACK_SPLIT_CLICK_GAP
+        return
+      end
     else
       stackSplitWait = STACK_SPLIT_CLICK_GAP
+      return
     end
-    return
   end
 
   if stackSplitStep == "okay" then
@@ -506,6 +509,7 @@ local function TryAutoYes()
   if clicked then
     lastClickKey = key
     QueueStackSplitAutomation()
+    TryAutoStackSplit(0)
     --BA:Print("Auto-clicked Yes for |cffffffff" .. (matchedItem or itemName) .. "|r (" .. clickWhy .. ").")
     if BA:IsAutoDebug() then
       BA:Debug("CLICK OK: " .. clickWhy .. " (stack split queued)")
@@ -546,6 +550,7 @@ local function HookOpenStackSplitFrame()
       BA:Debug("OpenStackSplitFrame maxStack=" .. tostring(maxStack))
     end
     QueueStackSplitAutomation()
+    TryAutoStackSplit(0)
   end)
 end
 
@@ -576,11 +581,16 @@ local function HookStaticPopupShow()
       DebugDataTable(data, " ")
     end
 
+    local dataMatch = type(data) == "table" and NameMatches(data.name)
+    if which == POPUP_WHICH or dataMatch then
+      TryAutoYes()
+    end
+
     local tick = CreateFrame("Frame")
     local frames = 0
     tick:SetScript("OnUpdate", function(f)
       frames = frames + 1
-      if frames >= 2 then
+      if frames >= 1 then
         f:SetScript("OnUpdate", nil)
         for i = 1, MAX_POPUPS do
           local popup = _G["StaticPopup" .. i]
@@ -588,7 +598,6 @@ local function HookStaticPopupShow()
             if BA:IsAutoDebug() then
               DumpOnPopupShown(i, "after StaticPopup_Show(" .. tostring(which) .. ")")
             end
-            local dataMatch = type(data) == "table" and NameMatches(data.name)
             if which == POPUP_WHICH or dataMatch then
               TryAutoYes()
             elseif BA:IsAutoDebug() then
